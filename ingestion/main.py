@@ -16,7 +16,10 @@ from pathlib import Path
 
 from config import load_config
 from db import create_engine_from_config, ensure_table_exists, upsert_batch
-from file_processor import process_file
+from file_processor import process_file, upload_raw_to_minio
+from dotenv import load_dotenv
+load_dotenv()
+
 
 
 BATCH_SIZE = 5000
@@ -47,6 +50,7 @@ def main():
             print(f"\nProcessing file: {file_path.name}")
 
             try:
+                upload_raw_to_minio(file_path)
                 df = process_file(file_path)
 
                 # 5. Ensure table exists (only once)

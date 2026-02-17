@@ -3,8 +3,35 @@ import hashlib
 from datetime import datetime,timezone
 from pathlib import Path
 from typing import List
+import boto3
+import os
 
 REQUIRED_COLUMNS = ["tourney_id", "match_num"]
+
+def upload_raw_to_minio(file_path:Path) ->None:
+    """
+    Upload raw file to MinIO with timestamped object key. 
+    Returns the object key used
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=os.getenv("MINIO_ENDPOINT"),
+        aws_access_key_id=os.getenv("MINIO_ROOT_USER"),
+        aws_secret_access_key=os.getenv("MINIO_ROOT_PASSWORD")
+    )
+    
+    bucket_name = "tennis-data"
+    
+    #ISO timestamp without special character for safety
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    object_key = f"raw/{timestamp}_{file_path.name}"
+    s3.upload_file(str(file_path), bucket_name, object_key)
+    print(f"Uploaded {file_path.name} to {bucket_name}/{object_key}")
+    
+    return object_key
 
 def normalize_columns(df:pd.DataFrame) -> pd.DataFrame:
     """
